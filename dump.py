@@ -18,10 +18,20 @@ import tempfile
 import subprocess
 import re
 import paramiko
+import stat
+import zipfile
 from paramiko import SSHClient
 from scp import SCPClient
 from tqdm import tqdm
 import traceback
+
+def zip_directory(directory_path, zip_filename):
+    with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for root, dirs, files in os.walk(directory_path):
+            for file in files:
+                file_path = os.path.join(root, file)
+                arcname = os.path.relpath(file_path, os.path.dirname(directory_path))
+                zipf.write(file_path, arcname)
 
 IS_PY2 = sys.version_info[0] < 3
 if IS_PY2:
@@ -87,7 +97,8 @@ def generate_ipa(path, display_name):
 
         target_dir = './' + PAYLOAD_DIR
         zip_args = ('zip', '-qr', os.path.join(os.getcwd(), ipa_filename), target_dir)
-        subprocess.check_call(zip_args, cwd=TEMP_DIR)
+        zip_directory(PAYLOAD_PATH,os.path.join(os.getcwd(), ipa_filename))
+        #subprocess.check_call(zip_args, cwd=TEMP_DIR)
         shutil.rmtree(PAYLOAD_PATH)
     except Exception as e:
         print(e)
@@ -122,7 +133,8 @@ def on_message(message, data):
             chmod_dir = os.path.join(PAYLOAD_PATH, os.path.basename(dump_path))
             chmod_args = ('chmod', '655', chmod_dir)
             try:
-                subprocess.check_call(chmod_args)
+                #subprocess.check_call(chmod_args)
+                os.chmod(chmod_dir, stat.S_IWUSR)
             except subprocess.CalledProcessError as err:
                 print(err)
 
@@ -140,7 +152,8 @@ def on_message(message, data):
             chmod_dir = os.path.join(PAYLOAD_PATH, os.path.basename(app_path))
             chmod_args = ('chmod', '755', chmod_dir)
             try:
-                subprocess.check_call(chmod_args)
+                #subprocess.check_call(chmod_args)
+                os.chmod(chmod_dir, stat.S_IWUSR)
             except subprocess.CalledProcessError as err:
                 print(err)
 
